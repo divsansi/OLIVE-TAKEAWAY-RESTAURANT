@@ -1,0 +1,42 @@
+name: build and scp files
+on: [push]
+jobs:
+    build:
+        name: Build
+        environment: HOST
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - name: clen the server directory
+              uses: appleboy/ssh-action@v1.0.2
+              with:
+                  host: ${{ secrets.HOST }}
+                  username: ${{ secrets.SSH_USER }}
+                  password: ${{ secrets.PASSWORD }}
+                  port: 22
+                  script: rm -rf /home/diwi/nextServerBuild/
+
+            - name: install dependencies
+              run: npm install --force
+
+            - name: build the project
+              run: npx next build
+
+            - name: copy build files via ssh
+              uses: appleboy/scp-action@v0.1.7
+              with:
+                  host: ${{ secrets.HOST }}
+                  username: ${{ secrets.SSH_USER }}
+                  password: ${{ secrets.PASSWORD }}
+                  port: 22
+                  source: ${{ github.workspace }}/*
+                  target: "/home/diwi/nextServerBuild"
+
+            - name: run the server
+              uses: appleboy/ssh-action@v1.0.2
+              with:
+                  host: ${{ secrets.HOST }}
+                  username: ${{ secrets.SSH_USER }}
+                  password: ${{ secrets.PASSWORD }}
+                  port: 22
+                  script: cd /home/diwi/nextServerBuild/github/workspace && pm2 delete nextjs && pm2 start "npm run start" --name nextjs

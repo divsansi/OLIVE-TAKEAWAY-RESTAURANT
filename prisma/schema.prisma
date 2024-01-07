@@ -1,0 +1,252 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model log {
+  id        String   @id @default(cuid()) @map("_id")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  activity  String
+  user      User?    @relation(fields: [userId], references: [id])
+  userId    String?
+}
+
+model User {
+  id                        String                      @id @default(cuid()) @map("_id")
+  name                      String?
+  username                  String?                     @unique
+  email                     String?
+  mobile                    String?
+  createdAt                 DateTime                    @default(now())
+  updatedAt                 DateTime                    @updatedAt
+  restaurant                restaurant[]
+  cart                      cart?                       @relation(fields: [cartId], references: [id])
+  cartId                    String?
+  wishlist                  wishlist?                   @relation(fields: [wishlistId], references: [id])
+  wishlistId                String?
+  log                       log[]
+  auth_session              Session[]
+  key                       Key[]
+  orderMenuItemFromUser     orderMenuItemFromUser[]
+  OrderRating               orderRating[]
+  role                      String                      @default("user")
+  shopStatus                String                      @default("Closed")
+  ShopRequest               shopRequest[]
+  emailVerification         emailVerification[]
+  passwordResetToken        passwordResetToken[]
+  orderMenuItemFromUserHold orderMenuItemFromUserHold[]
+}
+
+model Session {
+  id             String @id @default(cuid()) @map("_id")
+  user_id        String
+  active_expires BigInt
+  idle_expires   BigInt
+  user           User   @relation(references: [id], fields: [user_id], onDelete: Cascade)
+
+  @@index([user_id])
+}
+
+model Key {
+  id              String  @id @default(cuid()) @map("_id")
+  hashed_password String?
+  user_id         String
+  user            User    @relation(references: [id], fields: [user_id], onDelete: Cascade)
+
+  @@index([user_id])
+}
+
+model cart {
+  id          String            @id @default(cuid()) @map("_id")
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  userId      String?
+  menuItem    menuItemsOnCart[]
+  User        User[]
+  cartItemQty cartItemQty[]
+}
+
+model menuItem {
+  id                        String                      @id @default(cuid()) @map("_id")
+  createdAt                 DateTime                    @default(now())
+  updatedAt                 DateTime                    @updatedAt
+  menu                      menu?                       @relation(fields: [menuId], references: [id])
+  name                      String
+  description               String
+  photoURL                  String?                     @default("https://diwi-fullstack-bucket.s3.us-west-1.amazonaws.com/41f795ed-70f8-7f6c-6fc6-3d53c1fd3893.png")
+  price                     Float
+  menuId                    String?
+  cart                      menuItemsOnCart[]
+  wishlist                  menuItemsOnWishlist[]
+  orderMenuItemFromUser     orderMenuItemFromUser[]
+  cartItemQty               cartItemQty[]
+  orderMenuItemFromUserHold orderMenuItemFromUserHold[]
+}
+
+model wishlist {
+  id        String                @id @default(cuid()) @map("_id")
+  createdAt DateTime              @default(now())
+  updatedAt DateTime              @updatedAt
+  userId    String?
+  user      User[]
+  menuItem  menuItemsOnWishlist[]
+}
+
+model menuItemsOnCart {
+  menuItem   menuItem @relation(fields: [menuItemId], references: [id])
+  menuItemId String
+  cart       cart     @relation(fields: [cartId], references: [id])
+  cartId     String // relation scalar field (used in the `@relation` attribute above)
+  assignedAt DateTime @default(now())
+  assignedBy String
+  id         String   @id @default(cuid()) @map("_id")
+}
+
+model menuItemsOnWishlist {
+  menuItem   menuItem @relation(fields: [menuItemId], references: [id])
+  menuItemId String
+  wishlist   wishlist @relation(fields: [wishlistId], references: [id])
+  wishlistId String // relation scalar field (used in the `@relation` attribute above)
+  assignedAt DateTime @default(now())
+  assignedBy String
+  id         String   @id @default(cuid()) @map("_id")
+}
+
+model restaurant {
+  id                        String                      @id @default(cuid()) @map("_id")
+  createdAt                 DateTime                    @default(now())
+  updatedAt                 DateTime                    @updatedAt
+  name                      String
+  phone                     String?
+  email                     String?
+  user                      User?                       @relation(fields: [userId], references: [id])
+  userId                    String?
+  address                   String?
+  city                      String?
+  menus                     menu[]
+  orderMenuItemFromUser     orderMenuItemFromUser[]
+  OrderRating               orderRating[]
+  orderMenuItemFromUserHold orderMenuItemFromUserHold[]
+}
+
+model menu {
+  id           String      @id @default(cuid()) @map("_id")
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  name         String
+  description  String
+  type         String
+  restaurant   restaurant? @relation(fields: [restaurantId], references: [id])
+  restaurantId String?
+  menuItem     menuItem[]
+}
+
+model order {
+  id                        String                      @id @default(cuid()) @map("_id")
+  createdAt                 DateTime                    @default(now())
+  updatedAt                 DateTime                    @updatedAt
+  orderItem                 orderMenuItemFromUser[]
+  status                    String                      @default("Not Accepted")
+  OrderRating               orderRating[]
+  rated                     Boolean                     @default(false)
+  payment                   String                      @default("Cash")
+  paymentStatus             String                      @default("Not Paid")
+  orderMenuItemFromUserHold orderMenuItemFromUserHold[]
+}
+
+model orderMenuItemFromUser {
+  id           String      @id @default(cuid()) @map("_id")
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  order        order?      @relation(fields: [orderId], references: [id])
+  orderId      String?
+  menuItem     menuItem?   @relation(fields: [menuItemId], references: [id])
+  menuItemId   String?
+  restaurant   restaurant? @relation(fields: [restaurantId], references: [id])
+  restaurantId String?
+  qty          Int         @default(1)
+  user         User?       @relation(fields: [userId], references: [id])
+  userId       String?
+}
+
+model orderMenuItemFromUserHold {
+  id           String      @id @default(cuid()) @map("_id")
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  order        order?      @relation(fields: [orderId], references: [id])
+  orderId      String?
+  menuItem     menuItem?   @relation(fields: [menuItemId], references: [id])
+  menuItemId   String?
+  restaurant   restaurant? @relation(fields: [restaurantId], references: [id])
+  restaurantId String?
+  qty          Int         @default(1)
+  user         User?       @relation(fields: [userId], references: [id])
+  userId       String?
+}
+
+model cartItemQty {
+  id         String    @id @default(cuid()) @map("_id")
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  cart       cart?     @relation(fields: [cartId], references: [id])
+  cartId     String?
+  menuItem   menuItem? @relation(fields: [menuItemId], references: [id])
+  menuItemId String?
+  qty        Int       @default(1)
+}
+
+model orderRating {
+  id           String      @id @default(cuid()) @map("_id")
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  rating       Float
+  restaurant   restaurant? @relation(fields: [restaurantId], references: [id])
+  restaurantId String?
+  user         User?       @relation(fields: [userId], references: [id])
+  userId       String?
+  order        order?      @relation(fields: [orderId], references: [id])
+  orderId      String?
+}
+
+model shopRequest {
+  id        String   @id @default(cuid()) @map("_id")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User?    @relation(fields: [userId], references: [id])
+  userId    String
+  status    String   @default("Pending")
+  shopName  String
+  shopPhone String
+  shopEmail String
+  validDocs String
+  address   String
+  city      String
+}
+
+model emailVerification {
+  id        String   @id @default(cuid()) @map("_id")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User?    @relation(fields: [userId], references: [id])
+  userId    String
+  token     String
+  status    String   @default("Pending")
+}
+
+model passwordResetToken {
+  id        String   @id @default(cuid()) @map("_id")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User?    @relation(fields: [userId], references: [id])
+  userId    String
+  token     String
+  status    String   @default("Pending")
+}

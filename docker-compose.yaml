@@ -1,0 +1,14 @@
+# Use root/example as user/password credentials
+version: "3.1"
+
+services:
+    web:
+        build:
+            context: .
+            dockerfile: Dockerfile
+        container_name: web
+        restart: always
+        volumes:
+            - ./:/usr/src/app
+        ports:
+            - 22256:3000
